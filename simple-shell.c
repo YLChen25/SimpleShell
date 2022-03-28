@@ -584,9 +584,7 @@ void exec_command(char **args, char **redir_argv, int wait, int res) {
         } else { // Thực thi chạy nền
             // Parent process
             // printf("[LOGGING] Parent pid = <%d> spawned a child pid = <%d>.\n", getpid(), pid);
-            if (wait == 1) {
-                waitpid(pid, &status, WUNTRACED); // 
-            }
+            waitpid(pid, &status, WUNTRACED);
         }
     }
 }
