@@ -14,18 +14,15 @@
 // ############################## DEFINE SECTION ########################################
 #define MAX_LINE_LENGTH 1024
 #define BUFFER_SIZE 64
+// RM
 #define REDIR_SIZE 2
-#define PIPE_SIZE 3
+
 #define MAX_HISTORY_SIZE 128
 #define MAX_COMMAND_NAME_LENGTH 128
 
 #define PROMPT_FORMAT "%F %T "
 #define PROMPT_MAX_LENGTH 30
 
-#define TOFILE_DIRECT ">"
-#define APPEND_TOFILE_DIRECT ">>"
-#define FROMFILE "<"
-#define PIPE_OPT "|"
 // ######################################################################################
 
 
@@ -179,191 +176,6 @@ void parse_command(char *input_string, char **argv, int *wait) {
 }
 
 /**
- * @description: kiểm tra có xuất hiện arg chuyển hướng IO xuất hiện trong mảng chuỗi arg hay không
- * @param  argv mảng chuỗi chứa những chuỗi arg
- * @return vị trí của chuỗi chuyển hướng IO hoặc 0 nếu không có
- */
-int is_redirect(char **argv) {
-    int i = 0;
-    while (argv[i] != NULL) {
-        if (strcmp(argv[i], TOFILE_DIRECT) == 0 || strcmp(argv[i], APPEND_TOFILE_DIRECT) == 0 || strcmp(argv[i], FROMFILE) == 0) {
-            return i; // Có xuất hiện chuỗi chuyển hướng IO
-        }
-        i = -~i; // Tăng i lên một đơn vị
-    }
-    return 0; // Không có sự xuất hiện chuỗi chuyển hướng IO
-}
-
-/**
- * @description: kiểm tra có xuất hiện arg chuỗi giao tiếp Pipe xuất hiện trong mảng chuỗi arg hay không
- * @param argv mảng chuỗi chứa những chuỗi arg
- * @return vị trí của chuỗi giao tiếp Pipe hoặc 0 nếu không có
- */
-int is_pipe(char **argv) {
-    int i = 0;
-    while (argv[i] != NULL) {
-        if (strcmp(argv[i], PIPE_OPT) == 0) {
-            return i; // Có xuất hiện chuỗi giao tiếp Pipe
-        }
-        i = -~i; // Tăng i lên một đơn vị
-    }
-    return 0; // Không có sự xuất hiện chuỗi giao tiếp Pipe
-}
-
-/**
- * @description: Hàm parse chuyển hướng IO từ mảng các chuỗi arg
- * @param: argv mảng chuỗi chứa những chuỗi arg, redirect_argv mảng chuỗi chứa những chuỗi để thực hiện lệnh chuyển hướng IO, redirect_index vị trí chuyển IO opt trong argv
- * @return none
- */
-void parse_redirect(char **argv, char **redirect_argv, int redirect_index) {
-    redirect_argv[0] = strdup(argv[redirect_index]);
-    redirect_argv[1] = strdup(argv[redirect_index + 1]);
-    argv[redirect_index] = NULL;
-    argv[redirect_index + 1] = NULL;
-}
-
-/**
- * @description:  Hàm parse giao tiếp Pipe từ mảng các chuỗi arg
- * @param argv mảng chuỗi chứa những chuỗi arg, child01_argv mảng chuỗi chứa những chuỗi arg child 01, child02_argv mảng chuỗi chứa những chuỗi arg child 02, pipe_index vị trí pipe opt trong ags
- * @return
- */
-void parse_pipe(char **argv, char **child01_argv, char **child02_argv, int pipe_index) {
-    int i = 0;
-    for (i = 0; i < pipe_index; i++) {
-        child01_argv[i] = strdup(argv[i]);
-    }
-    child01_argv[i++] = NULL;
-
-    while (argv[i] != NULL) {
-        child02_argv[i - pipe_index - 1] = strdup(argv[i]);
-        i++;
-    }
-    child02_argv[i - pipe_index - 1] = NULL;
-}
-
-// Execution
-
-/**
- * @description: Hàm thực hiện lệnh child
- * @param argv mảng chuỗi chứa những chuỗi arg để truyền vào execvp (int execvp(const char *file, char *const argv[]);)
- * @return none
- */
-void exec_child(char **argv) {
-    if (execvp(argv[0], argv) < 0) {
-        fprintf(stderr, "Error: Failed to execte command.\n");
-        exit(EXIT_FAILURE);
-    }
-}
-
-/**
- * @description Hàm thực hiện chuyển hướng đầu vào <
- * @param argv mảng chuỗi chứa những chuỗi arg, dir mảng chuỗi chứa những chuỗi con chứa các args đã parse bằng parse_redirect
- * @return none
- */
-void exec_child_overwrite_from_file(char **argv, char **dir) {
-    // osh>ls < out.txt
-    int fd_in = open(dir[1], O_RDONLY);
-    if (fd_in == -1) {
-        perror("Error: Redirect input failed");
-        exit(EXIT_FAILURE);
-    }
-
-    dup2(fd_in, STDIN_FILENO);
-
-    if (close(fd_in) == -1) {
-        perror("Error: Closing input failed");
-        exit(EXIT_FAILURE);
-    }
-    exec_child(argv);
-}
-
-/**
- * @description Hàm thực hiện chuyển hướng đầu ra >
- * @param argv mảng chuỗi chứa những chuỗi arg, dir mảng chuỗi chứa những chuỗi con chứa các args đã parse bằng parse_redirect
- * @return none
- */
-void exec_child_overwrite_to_file(char **argv, char **dir) {
-    // osh>ls > out.txt
-
-    int fd_out;
-    fd_out = creat(dir[1], S_IRWXU);
-    if (fd_out == -1) {
-        perror("Error: Redirect output failed");
-        exit(EXIT_FAILURE);
-    }
-    dup2(fd_out, STDOUT_FILENO);
-    if (close(fd_out) == -1) {
-        perror("Error: Closing output failed");
-        exit(EXIT_FAILURE);
-    }
-
-    exec_child(argv);
-}
-
-/**
- * @description Hàm thực hiện chuyển hướng đầu ra >> (Append) nhưng mà đang lỗi, có lẽ tụi em sẽ update sau
- * @param argv mảng chuỗi chứa những chuỗi arg, dir mảng chuỗi chứa những chuỗi con chứa các args đã parse bằng parse_redirect
- * @return none
- */
-void exec_child_append_to_file(char **argv, char **dir) {
-    // osh>ls >> out.txt
-    int fd_out;
-    if (access(dir[0], F_OK) != -1) {
-        fd_out = open(dir[0], O_WRONLY | O_APPEND);
-    }
-    if (fd_out == -1) {
-        perror("Error: Redirect output failed");
-        exit(EXIT_FAILURE);
-    }
-    dup2(fd_out, STDOUT_FILENO);
-    if (close(fd_out) == -1) {
-        perror("Error: Closing output failed");
-        exit(EXIT_FAILURE);
-    }
-    exec_child(argv);
-}
-
-/**
- * @description Hàm thực hiện giao tiếp hai lệnh thông qua Pipe
- * @param argv_in mảng các args của child 01, argv_out mảng các args của child 02
- * @return none
- */
-void exec_child_pipe(char **argv_in, char **argv_out) {
-    int fd[2];
-    // p[0]: read end
-    // p[1]: write end
-    if (pipe(fd) == -1) {
-        perror("Error: Pipe failed");
-        exit(EXIT_FAILURE);
-    }
-
-    //child 1 exec input from main process
-    //write to child 2
-    if (fork() == 0) {
-        dup2(fd[1], STDOUT_FILENO);
-        close(fd[0]);
-        close(fd[1]);
-        exec_child(argv_in);
-        exit(EXIT_SUCCESS);
-    }
-
-    //child 2 exec output from child 1
-    //read from child 1
-    if (fork() == 0) {
-        dup2(fd[0], STDIN_FILENO);
-        close(fd[1]);
-        close(fd[0]);
-        exec_child(argv_out);
-        exit(EXIT_SUCCESS);
-    }
-
-    close(fd[0]);
-    close(fd[1]);
-    wait(0);
-    wait(0);    
-}
-
-/**
  * @description 
  * @param 
  * @return
@@ -446,18 +258,24 @@ int simple_shell_cd(char **argv) {
  */
 int simple_shell_help(char **argv) {
     static char help_team_information[] =
-        "OPERATING SYSTEMS PROJECT 01 - A SIMPLE SHELL\n"
+        "OPERATING SYSTEMS PROJECT 02 - A SIMPLE SHELL\n"
+        
         "λ Team member λ\n"
-        "18120061 \t\tNhut-Nam Le\n"
-        "18120185 \t\tDang-Khoa Doan\n"
+        "110054835 \t\tYu-Jung Chen\n"
+        "110054817 \t\tHui Huang\n"
+        "107440020 \t\tHank Yang\n"
+        "110598111 \t\tMark Hsieh\n"
+
+
         "λ Description λ\n"
-        "Khoa and Nam's Shell is a simple UNIX command interpreter that replicates functionalities of the simple shell (sh).\n"
-        "This program was written entirely in C as assignment for project 01 in Operating Systems Course CQ2018-21, host by lecturers Dung Tran Trung & lab teacher Le Giang Thanh."
+        "This program was written in C as assignment for homework 01 in Operating Systems Course."
         "\n"
+        
+        
         "\nUsage help command. Type help [command name] for help/ more information.\n"
         "Options for [command name]:\n"
         "cd <directory name>\t\t\tDescription: Change the current working directory.\n"
-        "exit              \t\t\tDescription: Exit Khoa & Nam'shell, buyback Linux Shell.\n";
+        "exit              \t\t\tDescription: Exit simple shell.\n";
     static char help_cd_command[] = "HELP CD COMMAND\n";
     static char help_exit_command[] = "HELP EXIT COMMAND\n";
 
@@ -509,48 +327,6 @@ int simple_shell_history(char *history, char **redir_args) {
     return res;
 }
 
-
-/**
- * @description Hàm thực thi chuyển hướng IO
- * @param args mảng chuỗi chứa những chuỗi arg để thực hiện lệnh, redir_argv mảng chuỗi chứa những chuỗi arg để thực hiện lệnh chuyển hướng IO
- * @return 0 nếu không thực hiện chuyển tiếp IO, 1 nếu đã thực hiện chuyển tiếp IO
- */
-int simple_shell_redirect(char **args, char **redir_argv) {
-    // printf("%s", "Executing redirect\n");
-    int redir_op_index = is_redirect(args);
-    // printf("%d", redir_op_index);
-    if (redir_op_index != 0) {
-        parse_redirect(args, redir_argv, redir_op_index);
-        if (strcmp(redir_argv[0], ">") == 0) {
-            exec_child_overwrite_to_file(args, redir_argv);
-        } else if (strcmp(redir_argv[0], "<") == 0) {
-            exec_child_overwrite_from_file(args, redir_argv);
-        } else if (strcmp(redir_argv[0], ">>") == 0) {
-            exec_child_append_to_file(args, redir_argv);
-        }
-        return 1;
-    }
-    return 0;
-}
-
-/**
- * @description Hàm thực thi pipe
- * @param  args mảng chuỗi chứa những chuỗi arg để thực hiện lệnh
- * @return 0 nếu không thực hiện giao tiếp pipe, 1 nếu thực hiện giao tiếp pipe
- */
-int simple_shell_pipe(char **args) {
-    int pipe_op_index = is_pipe(args);
-    if (pipe_op_index != 0) {  
-        // printf("%s", "Exec Pipe");
-        char *child01_arg[PIPE_SIZE];
-        char *child02_arg[PIPE_SIZE];   
-        parse_pipe(args, child01_arg, child02_arg, pipe_op_index);
-        exec_child_pipe(child01_arg, child02_arg);
-        return 1;
-    }
-    return 0;
-}
-
 /**
  * @description Hàm thực thi lệnh
  * @param 
@@ -573,9 +349,7 @@ void exec_command(char **args, char **redir_argv, int wait, int res) {
         pid_t pid = fork();
         if (pid == 0) {
             // Child process
-            if (res == 0) res = simple_shell_redirect(args, redir_argv);
-            if (res == 0) res = simple_shell_pipe(args);
-            if (res == 0) execvp(args[0], args);
+            execvp(args[0], args);
             exit(EXIT_SUCCESS);
 
         } else if (pid < 0) { // Khi mà việc tạo tiến trình con bị lỗi
@@ -608,6 +382,7 @@ int main(void) {
     char history[MAX_LINE_LENGTH] = "No commands in history";
 
     // Mảng chứa agrs để thực tthi chuyển hướng IO
+    // RM
     char *redir_argv[REDIR_SIZE];
 
     // Check xem có chạy nền không
