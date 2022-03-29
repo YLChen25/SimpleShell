@@ -212,7 +212,7 @@ char *get_prev_command(char *history) {
 int simple_shell_cd(char **args);
 int simple_shell_help(char **args);
 int simple_shell_exit(char **args);
-void exec_command(char **args, char **redir_argv, int wait, int res);
+void exec_command(char **args, int wait, int res);
 
 // List of builtin commands
 char *builtin_str[] = {
@@ -310,7 +310,7 @@ int simple_shell_exit(char **args) {
  * @param 
  * @return
  */
-int simple_shell_history(char *history, char **redir_args) {
+int simple_shell_history(char *history) {
     char *cur_args[BUFFER_SIZE];
     char cur_command[MAX_LINE_LENGTH];
     int t_wait;
@@ -323,7 +323,7 @@ int simple_shell_history(char *history, char **redir_args) {
     printf("%s\n", cur_command);
     parse_command(cur_command, cur_args, &t_wait);
     int res = 0;
-    exec_command(cur_args, redir_args, t_wait, res);
+    exec_command(cur_args, t_wait, res);
     return res;
 }
 
@@ -332,7 +332,7 @@ int simple_shell_history(char *history, char **redir_args) {
  * @param 
  * @return
  */
-void exec_command(char **args, char **redir_argv, int wait, int res) {
+void exec_command(char **args, int wait, int res) {
     // Check if there is a match in the builtin command array, if yes, then execute, if not, go to the next
     for (int i = 0; i < simple_shell_num_builtins(); i++) {
         if (strcmp(args[0], builtin_str[i]) == 0) {
@@ -380,10 +380,6 @@ int main(void) {
     // Array to store history
     char history[MAX_LINE_LENGTH] = "No commands in history";
 
-    // Array containing agrs to perform IO . redirection
-    // RM
-    char *redir_argv[REDIR_SIZE];
-
     // Check if it's running in the background
     int wait;
 
@@ -407,10 +403,10 @@ int main(void) {
 
         // Command execution
         if (strcmp(args[0], "!!") == 0) {
-            res = simple_shell_history(history, redir_argv);
+            res = simple_shell_history(history);
         } else {
             set_prev_command(history, t_line);
-            exec_command(args, redir_argv, wait, res);
+            exec_command(args, wait, res);
         }
         res = 0;
     }
