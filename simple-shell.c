@@ -33,7 +33,7 @@ int running = 1;
 
 
 /**
- * Hàm khởi tạo banner cho shell
+ * Display the banner of the simple shell
  * @param None
  * @return None
  */
@@ -59,7 +59,7 @@ char *get_current_dir() {
 }
 
 /**
- * Hàm khởi tạo Shell Prompt có dạng YYYY-MM-dd <space> hour:minute:second <space> default name of shell <space> >
+ * The shell prompt constructor has the form YYYY-MM-dd <space> hour:minute:second <space> default name of shell <space> >
  * @param None
  * @return a prompt string
  */
@@ -77,34 +77,34 @@ char *prompt() {
         }
     }
 
-    // Lấy ngày tháng năm
+    // Get the date month year
     now = time(NULL);
     if (now == -1) {
         fprintf(stderr, "Error: Cannot get current timestamp");
         exit(EXIT_FAILURE);
     }
 
-    // Lấy giờ hệ thống
+    // Get system time
     tmp = localtime(&now);
     if (tmp == NULL) {
         fprintf(stderr, "Error: Cannot identify timestamp");
         exit(EXIT_FAILURE);
     }
 
-    // Tạo chuỗi theo format YYYY-MM-dd <space> hour:minute:second <space>
+    // Create a string in the format YYYY-MM-dd <space> hour:minute:second <space>
     size = strftime(_prompt, PROMPT_MAX_LENGTH, PROMPT_FORMAT, tmp);
     if (size == 0) {
         fprintf(stderr, "Error: Cannot convert time to string");
         exit(EXIT_FAILURE);
     }
-    // Thêm vào sau tên mặc định của shell
+    // Add after the default shell name
     char* username = getenv("USER");
     strncat(_prompt, username, strlen(username));
     return _prompt;
 }
 
 /**
- * Hàm báo lỗi
+ * Error function
  * @param None
  * @return None
  */
@@ -113,9 +113,9 @@ void error_alert(char *msg) {
 }
 
 /**
- * @description: Hàm xóa dấu xuống dòng của một chuỗi
- * @param: line là một chuỗi các ký tự
- * @return: trả về một chuỗi đã được xóa dấu xuống dòng '\n'
+ * @description: Function to remove carriage return from a string
+ * @param: line is a string of characters
+ * @return: Returns a string with carriage returns removed '\n'
  */
 void remove_end_of_line(char *line) {
     int i = 0;
@@ -128,17 +128,17 @@ void remove_end_of_line(char *line) {
 
 // Readline
 /**
- * @description: Hàm đọc chuỗi nhập từ bàn phím 
- * @param: line là một chuỗi các ký tự lưu chuỗi người dùng nhập vào
+ * @description: Function to read string input from keyboard
+ * @param: line is a string of characters that stores the user input string
  * @return: none
  */
 void read_line(char *line) {
     char *ret = fgets(line, MAX_LINE_LENGTH, stdin);
 
-    // Định dạng lại chuỗi: xóa ký tự xuống dòng và đánh dấu vị trí '\n' bằng '\0' - kết thúc chuỗi
+    // Format string: remove carriage return and mark '\n' with '\0' - end of string
     remove_end_of_line(line);
 
-    // Nếu so sánh thấy chuỗi đầu vào là "exit" hoặc "quit" hoặc là NULL thì kết thúc chương trình
+    // If the comparison shows that the input string is "exit" or "quit" or NULL, the program ends
     if (strcmp(line, "exit") == 0 || ret == NULL || strcmp(line, "quit") == 0) {
         exit(EXIT_SUCCESS);
     }
@@ -147,8 +147,8 @@ void read_line(char *line) {
 // Parser
 
 /**
- * @description: Hàm parse chuỗi input từ người dùng ra những argument
- * @param : input_string là chuỗi người dùng nhập vào, argv mảng chuỗi chứa những chuỗi arg, is_background cho biết lệnh có chạy nền hay không?
+ * @description: The function parses the input string from the user and outputs the arguments
+ * @param : input_string is the user input string, argv the string array contains the arg strings, is_background indicates whether the command is running in the background or not?
  * @return: none
  */
 void parse_command(char *input_string, char **argv, int *wait) {
@@ -159,8 +159,8 @@ void parse_command(char *input_string, char **argv, int *wait) {
         i++;
     }
 
-    // If - else cho gọn tí
-    *wait = (input_string[strlen(input_string) - 1] == '&') ? 0 : 1; // Nếu có & thì wait = 0, ngược lại wait = 1
+    // If - else 
+    *wait = (input_string[strlen(input_string) - 1] == '&') ? 0 : 1; // If there is and then wait = 0, else wait = 1
     input_string[strlen(input_string) - 1] = (*wait == 0) ? input_string[strlen(input_string) - 1] = '\0' : input_string[strlen(input_string) - 1];
     i = 0;
     argv[i] = strtok(input_string, " ");
@@ -184,8 +184,8 @@ void exec_parent(pid_t child_pid, int *bg) {}
 
 // History
 /**
- * @description Hàm ghi lệnh trước đó
- * @param history chuỗi history, line chưa lệnh trước đó
+ * @description Function to write previous command
+ * @param history history string, line contains previous command
  * @return none
  */
 void set_prev_command(char *history, char *line) {
@@ -193,8 +193,8 @@ void set_prev_command(char *history, char *line) {
 }
 
 /**
- * @description Hàm lấy lệnh trước đó
- * @param history chuỗi history
+ * @description Function to get the previous command
+ * @param history Array of history
  * @return none
  */
 char *get_prev_command(char *history) {
@@ -205,7 +205,7 @@ char *get_prev_command(char *history) {
     return history;
 }
 
-// Built-in: Implement builtin functions để thực hiện vài lệnh cơ bản như cd (change directory), demo custome help command
+// Built-in: Implement builtin functions
 /*
   Function Declarations for builtin shell commands:
  */
@@ -232,12 +232,12 @@ int simple_shell_num_builtins() {
     return sizeof(builtin_str) / sizeof(char *);
 }
 
-// Implement - Cài đặt
+// Implement - Setting
 
 /**
- * @description Hàm cd (change directory) bằng cách gọi hàm chdir()
- * @param argv mảng chuỗi chứa những chuỗi arg để thực hiện lệnh
- * @return 0 nếu thất bại, 1 nếu thành công
+ * @description CD function 
+ * @param argv
+ * @return 0
  */
 int simple_shell_cd(char **argv) {
     if (argv[1] == NULL) {
@@ -252,8 +252,8 @@ int simple_shell_cd(char **argv) {
 }
 
 /**
- * @description Hàm help in ra command những chuỗi hướng dẫn
- * @param argv mảng chuỗi chứa những chuỗi arg để thực hiện lệnh
+ * @description Help function prints the instructions of the shell
+ * @param argv 
  * @return
  */
 int simple_shell_help(char **argv) {
@@ -296,8 +296,8 @@ int simple_shell_help(char **argv) {
 }
 
 /**
- * @description Hàm thoát
- * @param args mảng chuỗi chứa những chuỗi arg để thực hiện lệnh
+ * @description Exit function
+ * @param args String array containing the args to execute the command
  * @return
  */
 int simple_shell_exit(char **args) {
@@ -306,7 +306,7 @@ int simple_shell_exit(char **args) {
 }
 
 /**
- * @description Hàm thoát
+ * @description History display function
  * @param 
  * @return
  */
@@ -328,12 +328,12 @@ int simple_shell_history(char *history, char **redir_args) {
 }
 
 /**
- * @description Hàm thực thi lệnh
+ * @description Command execution function
  * @param 
  * @return
  */
 void exec_command(char **args, char **redir_argv, int wait, int res) {
-    // Kiểm tra có trùng với lệnh nào trong mảng builtin command không, có thì thực thi, không thì xuống tiếp dưới
+    // Check if there is a match in the builtin command array, if yes, then execute, if not, go to the next
     for (int i = 0; i < simple_shell_num_builtins(); i++) {
         if (strcmp(args[0], builtin_str[i]) == 0) {
             (*builtin_func[i])(args);
@@ -341,21 +341,20 @@ void exec_command(char **args, char **redir_argv, int wait, int res) {
         }
     }
 
-    // Chưa thực thi builtin commands
     if (res == 0) {
         int status;
 
-        // Tạo tiến trình con
+        // Create child process
         pid_t pid = fork();
         if (pid == 0) {
             // Child process
             execvp(args[0], args);
             exit(EXIT_SUCCESS);
 
-        } else if (pid < 0) { // Khi mà việc tạo tiến trình con bị lỗi
+        } else if (pid < 0) { // When child process creation fails
             perror("Error: Error forking");
             exit(EXIT_FAILURE);
-        } else { // Thực thi chạy nền
+        } else {
             // Parent process
             // printf("[LOGGING] Parent pid = <%d> spawned a child pid = <%d>.\n", getpid(), pid);
             waitpid(pid, &status, WUNTRACED);
@@ -364,49 +363,49 @@ void exec_command(char **args, char **redir_argv, int wait, int res) {
 }
 
 /**
- * @description Hàm main :))
- * @param void không có gì
- * @return 0 nếu hết chương trình
+ * @description Main function
+ * @param void 
+ * @return 0 
  */
 int main(void) {
-    // Mảng chưa các agrs
+    // Array to store args
     char *args[BUFFER_SIZE];
 
-    // Chuỗi line
+    // Command line
     char line[MAX_LINE_LENGTH];
 
-    // Chuỗi sao chép từ line
+    // String copied from line
     char t_line[MAX_LINE_LENGTH];
 
-    // Chuỗi lưu trữ lịch sử
+    // Array to store history
     char history[MAX_LINE_LENGTH] = "No commands in history";
 
-    // Mảng chứa agrs để thực tthi chuyển hướng IO
+    // Array containing agrs to perform IO . redirection
     // RM
     char *redir_argv[REDIR_SIZE];
 
-    // Check xem có chạy nền không
+    // Check if it's running in the background
     int wait;
 
-    // Khởi tạo banner shell
+    // Initialize banner shell
     init_shell();
     int res = 0;
 
-    // Khởi tạo một vòng lặp vô hạn
+    // Initialize an infinite loop
     while (running) {
         printf("%s:%s> ", prompt(), get_current_dir());
         fflush(stdout);
 
-        // Đọc chuuỗi nhận vào từ người dùng
+        // Read input string from user
         read_line(line);
 
-        // Sao chép chuỗi
+        // Copy string
         strcpy(t_line, line);
 
-        // Parser chuỗi input
+        // Parser input string
         parse_command(line, args, &wait);
 
-        // Thực thi lệnh
+        // Command execution
         if (strcmp(args[0], "!!") == 0) {
             res = simple_shell_history(history, redir_argv);
         } else {
