@@ -27,7 +27,7 @@ Successfully show previous and execute ls command
 
 ---
 # Team members
-110054817 黃慧：討論架構及內容，協助製作document<br>
+110054817 黃慧：討論架構及內容，協助製作document。<br>
 110054835 陳宥融：協助實作code<br>
 107440020 楊宗翰：討論架構及內容<br>
 110598111 謝成彥：討論架構及內容<br>
